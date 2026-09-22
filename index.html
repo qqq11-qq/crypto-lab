@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>密码实验室 · 密码学可视化教学工具</title>
+<meta name="description" content="开源密码学教学工具：可视化演示凯撒密码、维吉尼亚密码与 RSA 公钥密码的加解密全过程，适合自学与教学演示。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23121820'/%3E%3Cpath d='M32 12l14 6v12c0 10-6 17-14 21-8-4-14-11-14-21V18z' fill='none' stroke='%23D9A441' stroke-width='4' stroke-linejoin='round'/%3E%3Ccircle cx='32' cy='30' r='5' fill='%23D9A441'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#12161D;
+  --bg-soft:#1A202A;
+  --bg-line:#283040;
+  --bg-hover:#222A37;
+  --ink:#E9E6DE;
+  --ink-dim:#9AA3B2;
+  --ink-faint:#6B7688;
+  --amber:#D9A441;
+  --amber-soft:#F0C674;
+  --teal:#4E8A72;
+  --teal-soft:#7FB69C;
+  --rust:#C05B4D;
+  --rust-soft:#D9887B;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --radius:10px;
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+::selection{background:rgba(217,164,65,.3)}
+
+/* ===== 背景装饰：极淡的字母网格 ===== */
+.bg-grid{
+  position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(233,230,222,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(233,230,222,.035) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,#000 40%,transparent 100%);
+  -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,#000 40%,transparent 100%);
+}
+
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+
+/* ===== Hero ===== */
+.hero{padding:72px 0 40px;text-align:center}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:13px;color:var(--amber-soft);
+  border:1px solid rgba(217,164,65,.35);
+  background:rgba(217,164,65,.07);
+  padding:5px 14px;border-radius:999px;
+  letter-spacing:.06em;
+}
+.hero h1{
+  font-size:clamp(40px,7vw,68px);
+  font-weight:800;letter-spacing:.02em;margin:20px 0 14px;
+  background:linear-gradient(180deg,#F4F1E8 30%,var(--amber) 110%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero-sub{
+  max-width:620px;margin:0 auto;
+  color:var(--ink-dim);font-size:clamp(15px,2.2vw,17px);
+}
+.hero-nav{display:flex;justify-content:center;gap:12px;margin:28px 0 8px;flex-wrap:wrap}
+.hero-nav a{
+  color:var(--ink);text-decoration:none;
+  border:1px solid var(--bg-line);background:var(--bg-soft);
+  padding:9px 18px;border-radius:var(--radius);font-size:14px;
+  transition:border-color .2s,background .2s,transform .15s;
+}
+.hero-nav a:hover{border-color:var(--amber);background:var(--bg-hover);transform:translateY(-1px)}
+.hero-badges{
+  margin-top:16px;font-size:12.5px;color:var(--ink-faint);
+  display:flex;justify-content:center;gap:16px;flex-wrap:wrap;
+}
+.hero-badges span{display:inline-flex;align-items:center;gap:6px}
+.hero-badges svg{width:14px;height:14px;stroke:var(--ink-faint);fill:none;stroke-width:1.8}
+
+/* ===== 实验区通用 ===== */
+.lab{padding:44px 0;border-top:1px solid rgba(40,48,64,.6)}
+.lab-head{display:flex;gap:16px;align-items:flex-start;margin-bottom:8px}
+.lab-no{
+  font-family:var(--mono);font-size:14px;font-weight:700;color:var(--amber);
+  border:1px solid rgba(217,164,65,.4);border-radius:8px;
+  padding:2px 9px;margin-top:8px;flex:none;background:rgba(217,164,65,.06);
+}
+.lab-head h2{font-size:clamp(24px,4vw,32px);font-weight:800;letter-spacing:.01em}
+.lab-desc{color:var(--ink-dim);font-size:14.5px;max-width:680px}
+.lab-desc code{
+  font-family:var(--mono);font-size:13px;color:var(--amber-soft);
+  background:rgba(217,164,65,.09);padding:1px 6px;border-radius:5px;
+}
+
+.lab-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+.panel{
+  background:var(--bg-soft);border:1px solid var(--bg-line);
+  border-radius:var(--radius);padding:20px;
+  box-shadow:var(--shadow);
+  min-width:0;
+}
+.panel-full{grid-column:1/-1}
+.panel h3{
+  font-size:14px;font-weight:700;color:var(--ink-dim);
+  letter-spacing:.05em;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.panel h3 .dot{width:6px;height:6px;border-radius:50%;background:var(--amber);flex:none}
+
+label.field{display:block;margin-bottom:14px}
+label.field .lbl{
+  display:block;font-size:13px;color:var(--ink-dim);margin-bottom:6px;
+}
+input[type=text],input[type=number],textarea{
+  width:100%;background:var(--bg);color:var(--ink);
+  border:1px solid var(--bg-line);border-radius:8px;
+  padding:10px 12px;font-size:15px;font-family:var(--sans);
+  transition:border-color .2s;
+}
+textarea{resize:vertical;min-height:74px;font-family:var(--mono);font-size:14.5px;line-height:1.6}
+input:focus,textarea:focus{outline:none;border-color:var(--amber)}
+input[type=number]::-webkit-inner-spin-button{opacity:.4}
+
+.btn{
+  appearance:none;cursor:pointer;
+  border:1px solid var(--bg-line);background:var(--bg-hover);color:var(--ink);
+  border-radius:8px;padding:9px 16px;font-size:14px;font-family:var(--sans);
+  transition:border-color .2s,background .2s,transform .15s;
+}
+.btn:hover{border-color:var(--amber)}
+.btn:active{transform:scale(.98)}
+.btn-primary{
+  background:var(--amber);border-color:var(--amber);color:#16130B;font-weight:700;
+}
+.btn-primary:hover{background:var(--amber-soft);border-color:var(--amber-soft)}
+.btn-sm{padding:5px 11px;font-size:13px}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+/* 滑块 */
+.range-row{display:flex;align-items:center;gap:12px}
+input[type=range]{
+  flex:1;appearance:none;-webkit-appearance:none;height:4px;
+  background:var(--bg-line);border-radius:4px;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:var(--amber);border:3px solid var(--bg);box-shadow:0 0 0 1px var(--amber);
+}
+input[type=range]::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;
+  background:var(--amber);border:3px solid var(--bg);
+}
+.range-val{
+  font-family:var(--mono);font-weight:700;color:var(--amber);
+  font-size:18px;min-width:44px;text-align:center;
+}
+
+/* 密文输出 */
+.cipher-out{
+  font-family:var(--mono);font-size:clamp(18px,3vw,24px);font-weight:700;
+  color:var(--amber-soft);word-break:break-all;line-height:1.6;
+  letter-spacing:.04em;margin-top:6px;min-height:1.6em;
+}
+.cipher-out .ch{display:inline-block;transition:color .15s,transform .15s}
+.cipher-out .ch.hit{color:#fff;text-shadow:0 0 12px rgba(217,164,65,.8)}
+.cipher-meta{font-size:12.5px;color:var(--ink-faint);margin-top:8px;font-family:var(--mono)}
+
+/* 提示条 */
+.note{
+  font-size:13px;color:var(--ink-dim);background:rgba(78,138,114,.08);
+  border:1px solid rgba(78,138,114,.28);border-radius:8px;padding:9px 12px;
+  margin-top:14px;line-height:1.6;
+}
+.note.warn{background:rgba(192,91,77,.08);border-color:rgba(192,91,77,.3)}
+
+/* ===== 凯撒字母环 ===== */
+.ring-wrap{display:flex;justify-content:center;padding:8px 0 2px}
+.ring-wrap svg{width:100%;max-width:330px;height:auto}
+.ring-letter{cursor:pointer;transition:opacity .15s}
+.ring-letter:hover{opacity:.75}
+.ring-letter.dim{opacity:.28}
+.ring-line{stroke:var(--amber);stroke-width:1.6;stroke-dasharray:4 3;fill:none;transition:opacity .2s}
+.ring-map{
+  font-family:var(--mono);font-size:12px;fill:var(--amber-soft);
+  text-anchor:middle;letter-spacing:.08em;
+}
+.ring-shift{font-family:var(--mono);font-size:34px;font-weight:700;fill:var(--amber);text-anchor:middle}
+
+/* ===== 维吉尼亚过程条 ===== */
+.proc{margin-top:10px;overflow-x:auto;padding-bottom:6px}
+.proc-rows{min-width:max-content}
+.proc-row{display:flex;align-items:center;margin-bottom:2px}
+.proc-label{
+  flex:none;width:52px;font-size:12px;color:var(--ink-faint);
+  font-family:var(--mono);padding-right:10px;text-align:right;
+}
+.proc-cells{display:flex}
+.proc-cell{
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:14px;border-radius:6px;margin:2px;
+  background:var(--bg);border:1px solid var(--bg-line);flex:none;
+  transition:background .15s,border-color .15s,transform .15s;
+}
+.proc-cell.head{color:var(--amber-soft)}
+.proc-cell.key{color:var(--teal-soft)}
+.proc-cell.res{color:#fff;font-weight:700}
+.proc-cell.cur{background:rgba(217,164,65,.18);border-color:var(--amber);transform:translateY(-2px)}
+.proc-cell.skip{opacity:.25}
+
+/* ===== 密钥卡 ===== */
+.key-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.key-card{
+  border:1px solid var(--bg-line);border-radius:var(--radius);
+  padding:14px 16px;background:var(--bg);
+}
+.key-card .kc-name{font-size:12.5px;color:var(--ink-faint);letter-spacing:.04em;margin-bottom:4px}
+.key-card .kc-body{font-family:var(--mono);font-size:15px;color:var(--amber-soft);word-break:break-all;line-height:1.55}
+.key-card.pub{border-color:rgba(78,138,114,.4)}
+.key-card.pub .kc-body{color:var(--teal-soft)}
+.key-card.priv{border-color:rgba(192,91,77,.4)}
+.key-card.priv .kc-body{color:var(--rust-soft)}
+
+/* RSA 步骤 */
+.steps{margin-top:16px}
+.step{
+  display:flex;gap:12px;align-items:flex-start;
+  padding:10px 0;border-top:1px dashed rgba(40,48,64,.8);
+}
+.step:first-child{border-top:none}
+.step .st-no{
+  flex:none;width:22px;height:22px;border-radius:50%;margin-top:3px;
+  border:1px solid var(--bg-line);color:var(--ink-dim);
+  font-family:var(--mono);font-size:11.5px;
+  display:flex;align-items:center;justify-content:center;
+}
+.step .st-body{font-size:14px;color:var(--ink-dim);line-height:1.6}
+.step .st-body b{color:var(--ink);font-weight:700}
+.step .st-body .formula{font-family:var(--mono);color:var(--amber-soft)}
+.step .st-body .plain{font-family:var(--mono);color:var(--ink);font-size:13.5px;margin-top:3px}
+
+/* ===== 暴力破解 / 频率 ===== */
+.crack-list{margin-top:10px;max-height:340px;overflow-y:auto;border:1px solid var(--bg-line);border-radius:8px}
+.crack-row{
+  display:flex;align-items:flex-start;gap:10px;padding:7px 12px;
+  font-size:13.5px;border-bottom:1px solid rgba(40,48,64,.5);
+}
+.crack-row:last-child{border-bottom:none}
+.crack-row .off{flex:none;font-family:var(--mono);color:var(--ink-faint);width:34px}
+.crack-row .txt{font-family:var(--mono);color:var(--ink-dim);word-break:break-all;line-height:1.5}
+.crack-row.top{background:rgba(217,164,65,.07)}
+.crack-row.top .off{color:var(--amber);font-weight:700}
+.crack-row.top .txt{color:var(--ink)}
+
+.freq-wrap{display:flex;justify-content:center;padding:6px 0 2px}
+.freq-wrap svg{width:100%;max-width:760px;height:auto}
+.freq-legend{display:flex;gap:18px;justify-content:center;font-size:12px;color:var(--ink-faint);margin-top:6px;flex-wrap:wrap}
+.freq-legend i{display:inline-block;width:14px;height:8px;margin-right:6px;vertical-align:middle;border-radius:2px}
+.freq-legend .lg-cipher{background:var(--amber)}
+.freq-legend .lg-en{background:transparent;border-top:2px dashed var(--teal-soft)}
+
+/* ===== 讲解卡 ===== */
+.why{
+  margin-top:18px;border-left:3px solid var(--amber);
+  background:rgba(217,164,65,.05);border-radius:0 10px 10px 0;
+  padding:14px 18px;
+}
+.why h4{font-size:13.5px;color:var(--amber-soft);margin-bottom:6px;letter-spacing:.04em}
+.why p{font-size:13.5px;color:var(--ink-dim);line-height:1.75}
+.why p + p{margin-top:8px}
+.why .hl{color:var(--ink)}
+
+/* ===== Footer ===== */
+footer{border-top:1px solid rgba(40,48,64,.6);padding:36px 0 48px;margin-top:20px}
+.foot-inner{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:flex-start}
+.foot-inner p{font-size:12.5px;color:var(--ink-faint);max-width:560px;line-height:1.7}
+.foot-inner a{color:var(--amber-soft);text-decoration:none}
+.foot-inner a:hover{text-decoration:underline}
+
+/* ===== 响应式 ===== */
+@media (max-width:860px){
+  .lab-grid{grid-template-columns:1fr}
+  .key-cards{grid-template-columns:1fr}
+  .hero{padding:56px 0 28px}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  input[type=text],input[type=number],textarea{font-size:16px}
+  .lab-desc{font-size:15px}
+  .btn{font-size:15px}
+}
+@media (max-width:420px){
+  .wrap{padding:0 14px}
+  .panel{padding:16px}
+  .proc-cell{width:26px;height:26px;font-size:12.5px}
+}
+</style>
+</head>
+<body>
+<div class="bg-grid" aria-hidden="true"></div>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="hero-tag">从古典到公钥 · 亲手拆解加解密</span>
+    <h1>密码实验室</h1>
+    <p class="hero-sub">一个开源的密码学可视化教学工具：拖动滑块、输入密钥、观察每一步运算，直观理解三种经典密码是怎么加密、怎么被破解的。</p>
+    <nav class="hero-nav">
+      <a href="#caesar">凯撒密码</a>
+      <a href="#vigenere">维吉尼亚</a>
+      <a href="#rsa">RSA 公钥</a>
+      <a href="#frequency">频率破解</a>
+    </nav>
+    <div class="hero-badges">
+      <span><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>纯前端</span>
+      <span><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3.4-6.5M20 4v5h-5"/></svg>零依赖</span>
+      <span><svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>单文件即用</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ===== 01 凯撒密码 ===== -->
+  <section class="lab" id="caesar">
+    <div class="lab-head">
+      <span class="lab-no">01</span>
+      <div>
+        <h2>凯撒密码</h2>
+        <p class="lab-desc">古罗马时期最古老的替换密码：把字母表平移固定位数，例如偏移 3 时 <code>A → D</code>、<code>HELLO → KHOOR</code>。拖一拖滑块，看字母环怎么转动。</p>
+      </div>
+    </div>
+
+    <div class="lab-grid">
+      <div class="panel">
+        <h3><span class="dot"></span>加密操作台</h3>
+        <label class="field">
+          <span class="lbl">明文（仅 A–Z 参与移位，其他字符原样保留）</span>
+          <textarea id="c-plain" spellcheck="false">ATTACK AT DAWN</textarea>
+        </label>
+        <label class="field">
+          <span class="lbl">偏移位数（密钥 k）</span>
+          <div class="range-row">
+            <button class="btn btn-sm" id="c-dec" aria-label="减少偏移">−</button>
+            <input type="range" id="c-shift" min="0" max="25" value="3" step="1">
+            <button class="btn btn-sm" id="c-inc" aria-label="增加偏移">＋</button>
+            <span class="range-val" id="c-shift-val">3</span>
+          </div>
+        </label>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="c-enc">加密 →</button>
+        </div>
+        <label class="field" style="margin-top:18px">
+          <span class="lbl">密文输出</span>
+          <div class="cipher-out" id="c-cipher" aria-live="polite">KHOOR</div>
+        </label>
+        <div class="note" id="c-map-note">映射示例：A → D</div>
+      </div>
+
+      <div class="panel">
+        <h3><span class="dot"></span>字母环 · 偏移可视化</h3>
+        <div class="ring-wrap">
+          <svg id="c-ring" viewBox="0 0 340 340" role="img" aria-label="凯撒密码字母环"></svg>
+        </div>
+        <p style="font-size:12.5px;color:var(--ink-faint);text-align:center;margin-top:8px">内环是偏移后的字母表 · 点击任意字母查看映射</p>
+      </div>
+    </div>
+
+    <div class="panel panel-full" style="margin-top:18px">
+      <h3><span class="dot"></span>暴力破解演示 · 凯撒只有 26 种可能</h3>
+      <p class="lab-desc" style="margin-bottom:12px">遍历全部 26 个偏移，按"英文字母频率匹配度"自动评分排序，分数越高越像真实英文。这证明凯撒密码今天已经毫无安全性可言。</p>
+      <button class="btn" id="c-crack">尝试全部 26 种偏移</button>
+      <div class="crack-list" id="c-crack-list" hidden></div>
+    </div>
+
+    <div class="why">
+      <h4>为什么它不安全</h4>
+      <p>密钥空间只有 26 种，暴力破解几毫秒完成；即使不知道偏移，频率分析也能轻松击破（见下方第 04 节）。<span class="hl">它的价值在于历史意义和思想启蒙</span>——替换与移位，是一切现代分组密码的基本构件。</p>
+    </div>
+  </section>
+
+  <!-- ===== 02 维吉尼亚密码 ===== -->
+  <section class="lab" id="vigenere">
+    <div class="lab-head">
+      <span class="lab-no">02</span>
+      <div>
+        <h2>维吉尼亚密码</h2>
+        <p class="lab-desc">16 世纪发明的多表替换密码：每个位置使用不同的偏移，偏移由密钥循环决定，公式 <code>c = (p + k) mod 26</code>。它一度被称为"不可破译的密码"。</p>
+      </div>
+    </div>
+
+    <div class="lab-grid">
+      <div class="panel">
+        <h3><span class="dot"></span>加密操作台</h3>
+        <label class="field">
+          <span class="lbl">明文（仅 A–Z 参与加密）</span>
+          <textarea id="v-plain" spellcheck="false">WE ARE DISCOVERED</textarea>
+        </label>
+        <label class="field">
+          <span class="lbl">密钥（只取字母，自动忽略其他字符）</span>
+          <input type="text" id="v-key" value="KEY" spellcheck="false">
+        </label>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="v-enc">加密 →</button>
+          <button class="btn" id="v-play">逐步演示</button>
+        </div>
+        <label class="field" style="margin-top:18px">
+          <span class="lbl">密文输出</span>
+          <div class="cipher-out" id="v-cipher" aria-live="polite"></div>
+        </label>
+      </div>
+
+      <div class="panel">
+        <h3><span class="dot"></span>逐字符运算过程</h3>
+        <p style="font-size:12.5px;color:var(--ink-faint);margin-bottom:8px">明文字母与密钥字母的数值相加，取模 26 得到密文字母。</p>
+        <div class="proc" id="v-proc"><div class="proc-rows" id="v-proc-rows"></div></div>
+        <div class="note" id="v-note">点击"加密"后，这里会展开每个字符的运算。</div>
+      </div>
+    </div>
+
+    <div class="why">
+      <h4>它为什么不再安全</h4>
+      <p>维吉尼亚密码打败了单表频率分析，但密钥一旦重复，就会留下周期性破绽。卡西斯基检测可以估出密钥长度，再按长度把密文拆成多组凯撒密文逐段击破。<span class="hl">"足够好的加密"必须让密钥永不重复</span>——这正是一次性密码本（OTP）的思路，也是现代密码学"密钥管理"问题的开端。</p>
+    </div>
+  </section>
+
+  <!-- ===== 03 RSA ===== -->
+  <section class="lab" id="rsa">
+    <div class="lab-head">
+      <span class="lab-no">03</span>
+      <div>
+        <h2>RSA 公钥密码</h2>
+        <p class="lab-desc">1977 年诞生的第一个实用公钥密码。加密用公钥 <code>(e, n)</code>，解密用私钥 <code>(d, n)</code>，安全性建立在"大整数分解非常困难"之上。下面用小素数把每一步都摊开给你看。</p>
+      </div>
+    </div>
+
+    <div class="lab-grid">
+      <div class="panel">
+        <h3><span class="dot"></span>密钥生成</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label class="field">
+            <span class="lbl">素数 p</span>
+            <input type="number" id="r-p" value="61" min="2" max="997">
+          </label>
+          <label class="field">
+            <span class="lbl">素数 q（q ≠ p）</span>
+            <input type="number" id="r-q" value="53" min="2" max="997">
+          </label>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="r-gen">生成密钥对</button>
+          <button class="btn btn-sm" id="r-random">随机小素数</button>
+          <button class="btn btn-sm" id="r-auto">一键生成示例</button>
+        </div>
+        <div id="r-err" class="note warn" hidden></div>
+        <div style="margin-top:18px">
+          <div class="key-cards">
+            <div class="key-card pub">
+              <div class="kc-name">公钥（公开）</div>
+              <div class="kc-body" id="r-pub">—</div>
+            </div>
+            <div class="key-card priv">
+              <div class="kc-name">私钥（保密）</div>
+              <div class="kc-body" id="r-priv">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3><span class="dot"></span>密钥生成过程</h3>
+        <div class="steps" id="r-steps"></div>
+      </div>
+    </div>
+
+    <div class="panel panel-full" style="margin-top:18px">
+      <h3><span class="dot"></span>加解密实验</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end">
+        <label class="field">
+          <span class="lbl">消息 m（整数，需满足 0 &lt; m &lt; n）</span>
+          <input type="number" id="r-msg" value="42" min="1">
+        </label>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn btn-primary" id="r-enc">加密 c = m^e mod n</button>
+          <button class="btn" id="r-dec">解密 m = c^d mod n</button>
+        </div>
+      </div>
+      <label class="field" style="margin-top:14px">
+        <span class="lbl">密文 c / 解密结果</span>
+        <div class="cipher-out" id="r-out" style="font-size:20px">—</div>
+      </label>
+      <div class="steps" id="r-pow-steps" style="margin-top:8px"></div>
+      <div class="note">真实世界的 RSA 使用至少 2048 位的超大素数（约 600 位十进制数字），本工具使用小素数仅用于演示数学原理。</div>
+    </div>
+
+    <div class="why">
+      <h4>安全性的根源</h4>
+      <p>公钥和私钥由同一个数学结构（n 的分解）耦合而成：知道 p、q 就能算出私钥 d。<span class="hl">公开 n 却不公开 p、q，别人就无法算出 d</span>——因为大数分解目前没有多项式时间算法。量子计算机出现后，Shor 算法可快速分解大整数，这也是量子密码和后量子密码（PQC）研究的由来。</p>
+    </div>
+  </section>
+
+  <!-- ===== 04 频率破解 ===== -->
+  <section class="lab" id="frequency">
+    <div class="lab-head">
+      <span class="lab-no">04</span>
+      <div>
+        <h2>频率分析 · 如何破解替换密码</h2>
+        <p class="lab-desc">英文文本中每个字母的出现频率是稳定的：E 约 12.7%、T 约 9.1%、A 约 8.2%。把密文字母频率画出来，最高那根柱子大概率就是 E，偏移立刻现形。</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="dot"></span>密文字母频率 vs 英文标准频率</h3>
+      <div class="freq-wrap">
+        <svg id="f-chart" viewBox="0 0 760 300" role="img" aria-label="字母频率柱状图"></svg>
+      </div>
+      <div class="freq-legend">
+        <span><i class="lg-cipher"></i>密文实际频率</span>
+        <span><i class="lg-en"></i>英文标准频率（虚线）</span>
+      </div>
+      <label class="field" style="margin-top:14px">
+        <span class="lbl">输入密文进行分析（可粘贴 01 节生成的密文）</span>
+        <textarea id="f-input" spellcheck="false">WKH TXLFN EURZQ IRA MXPSV RYHU WKH ODCB GRJ</textarea>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="f-analyze">分析频率</button>
+        <button class="btn" id="f-import">从凯撒密文导入</button>
+      </div>
+      <div id="f-verdict" class="note" style="margin-top:14px"></div>
+    </div>
+
+    <div class="why">
+      <h4>破译思路</h4>
+      <p>第一步：数出密文里每个字母出现几次，找到最高频字母；第二步：假设它就是 E，算出偏移；第三步：代入凯撒密码验证，如果解出来是通顺的英文，破译完成。<span class="hl">这就是频率分析的完整闭环</span>——也是所有替换密码的天敌。</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div>
+      <p><strong style="color:var(--ink)">密码实验室 Crypto Lab</strong> — 开源密码学教学工具，纯前端实现，无任何外部依赖，下载单个 HTML 即可离线运行。</p>
+      <p style="margin-top:8px">英文标准字母频率数据参考：英语字母频率表（Wikipedia 通用值，E≈12.70%）。工具仅用于教学演示，真实加密请使用成熟密码库。</p>
+    </div>
+    <p>一键 Star 支持开源 · 欢迎提交 Issue 与 PR</p>
+  </div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= 工具函数 ================= */
+const $ = id => document.getElementById(id);
+const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const toArr = s => (s.toUpperCase().match(/[A-Z]/g) || []);
+
+/* 英文标准字母频率（%，Wikipedia 通用值） */
+const EN_FREQ = {
+  A:8.17,B:1.49,C:2.78,D:4.25,E:12.70,F:2.23,G:2.02,H:6.09,
+  I:6.97,J:0.15,K:0.77,L:4.03,M:2.41,N:6.75,O:7.51,P:1.93,
+  Q:0.10,R:5.99,S:6.33,T:9.06,U:2.76,V:0.98,W:2.36,X:0.15,
+  Y:1.97,Z:0.07
+};
+
+/* 文本相似度评分：文本字母频率与英文标准频率的欧氏距离，越小越像英文 */
+function englishScore(text){
+  const letters = toArr(text);
+  if(letters.length === 0) return 1e9;
+  const count = {}; letters.forEach(ch => count[ch] = (count[ch]||0) + 1);
+  let score = 0;
+  A.split("").forEach(ch => {
+    const pct = (count[ch]||0) / letters.length * 100;
+    score += (pct - EN_FREQ[ch]) ** 2;
+  });
+  return score;
+}
+
+function caesar(text, shift){
+  return text.split("").map(ch => {
+    if(/[A-Za-z]/.test(ch)){
+      const base = ch === ch.toUpperCase() ? 65 : 97;
+      return String.fromCharCode((ch.charCodeAt(0) - base + shift + 26) % 26 + base);
+    }
+    return ch;
+  }).join("");
+}
+
+function charDiff(a, b){ /* 两个大写字母的偏移差 */
+  return (b.charCodeAt(0) - a.charCodeAt(0) + 26) % 26;
+}
+
+function esc(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+/* ================= 01 凯撒密码 ================= */
+const ringSvg = $("c-ring");
+const R = 132, RC = 96, CX = 170, CY = 170;
+let ringGroup = null;
+
+function buildRing(){
+  ringSvg.innerHTML = "";
+  const NS = "http://www.w3.org/2000/svg";
+  ringGroup = document.createElementNS(NS,"g");
+  ringSvg.appendChild(ringGroup);
+  renderRing(3, null);
+}
+
+function polar(cx, cy, r, deg){
+  const rad = (deg - 90) * Math.PI / 180;
+  return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+}
+
+function renderRing(shift, hoverIdx){
+  const NS = "http://www.w3.org/2000/svg";
+  ringGroup.innerHTML = "";
+  const doc = ringGroup.ownerDocument;
+
+  /* 外环：固定字母表 A–Z */
+  for(let i = 0; i < 26; i++){
+    const [x, y] = polar(CX, CY, R, i * 360/26);
+    const t = doc.createElementNS(NS,"text");
+    t.setAttribute("x",x); t.setAttribute("y",y);
+    t.setAttribute("text-anchor","middle");
+    t.setAttribute("dominant-baseline","central");
+    t.setAttribute("font-size","15");
+    t.setAttribute("font-family","var(--mono)");
+    t.setAttribute("fill","var(--ink)");
+    t.textContent = A[i];
+    t.classList.add("ring-letter");
+    t.dataset.idx = i;
+    t.addEventListener("click", () => {
+      const map = (i + shift) % 26;
+      $("c-map-note").textContent = `映射：${A[i]} → ${A[map]}（偏移 ${shift}）`;
+    });
+    ringGroup.appendChild(t);
+  }
+
+  /* 内环：偏移后的字母表（整体旋转） */
+  for(let i = 0; i < 26; i++){
+    const [x, y] = polar(CX, CY, RC, i * 360/26);
+    const t = doc.createElementNS(NS,"text");
+    t.setAttribute("x",x); t.setAttribute("y",y);
+    t.setAttribute("text-anchor","middle");
+    t.setAttribute("dominant-baseline","central");
+    t.setAttribute("font-size","13");
+    t.setAttribute("font-family","var(--mono)");
+    t.setAttribute("fill","var(--amber-soft)");
+    t.textContent = A[(i - shift + 26) % 26];
+    t.classList.add("ring-letter","ring-inner");
+    t.dataset.idx = i;
+    ringGroup.appendChild(t);
+  }
+
+  /* 连接线：外环 i → 内环对应密文字母（只画 hover 或默认若干条） */
+  const drawLines = (idx) => {
+    ringGroup.querySelectorAll(".ring-line").forEach(l => l.remove());
+    ringGroup.querySelectorAll(".ring-map").forEach(l => l.remove());
+    if(idx === null) return;
+    const mapIdx = (idx + shift) % 26;
+    const [x1,y1] = polar(CX,CY,R,idx*360/26);
+    const [x2,y2] = polar(CX,CY,RC,mapIdx*360/26);
+    const line = doc.createElementNS(NS,"line");
+    line.setAttribute("x1",x1); line.setAttribute("y1",y1);
+    line.setAttribute("x2",x2); line.setAttribute("y2",y2);
+    line.classList.add("ring-line");
+    ringGroup.appendChild(line);
+    const [mx,my] = polar(CX,CY,(R+RC)/2,(idx+mapIdx)/2*360/26);
+    const mt = doc.createElementNS(NS,"text");
+    mt.setAttribute("x",mx); mt.setAttribute("y",my);
+    mt.setAttribute("text-anchor","middle");
+    mt.setAttribute("dominant-baseline","central");
+    mt.textContent = A[idx] + "→" + A[mapIdx];
+    mt.classList.add("ring-map");
+    ringGroup.appendChild(mt);
+  };
+
+  ringGroup.querySelectorAll(".ring-letter").forEach(el => {
+    el.addEventListener("mouseenter", () => {
+      const idx = +el.dataset.idx;
+      const outer = el.classList.contains("ring-inner") ? ((idx + shift) % 26) : idx;
+      drawLines(outer);
+      ringGroup.querySelectorAll(".ring-letter").forEach(o => {
+        o.classList.toggle("dim", !(o.classList.contains("ring-inner") === (el.classList.contains("ring-inner"))));
+      });
+    });
+    el.addEventListener("mouseleave", () => {
+      drawLines(null);
+      ringGroup.querySelectorAll(".ring-letter").forEach(o => o.classList.remove("dim"));
+    });
+  });
+
+  const st = doc.createElementNS(NS,"text");
+  st.setAttribute("x",CX); st.setAttribute("y",CY);
+  st.setAttribute("text-anchor","middle");
+  st.setAttribute("dominant-baseline","central");
+  st.textContent = "+" + shift;
+  st.classList.add("ring-shift");
+  ringGroup.appendChild(st);
+}
+
+function renderCaesar(){
+  const plain = $("c-plain").value;
+  const shift = parseInt($("c-shift").value, 10);
+  const cipher = caesar(plain, shift);
+  const out = $("c-cipher");
+  out.innerHTML = cipher.split("").map(ch => {
+    return /[A-Za-z]/.test(ch)
+      ? `<span class="ch">${esc(ch)}</span>`
+      : esc(ch);
+  }).join("");
+  $("c-shift-val").textContent = shift;
+  renderRing(shift, null);
+  const first = toArr(plain)[0];
+  $("c-map-note").textContent = first
+    ? `映射：${first} → ${caesar(first, shift)}（偏移 ${shift}）`
+    : `偏移 ${shift}（无字母可演示映射）`;
+  /* 闪烁提示 */
+  out.querySelectorAll(".ch").forEach((el,i) => {
+    setTimeout(() => el.classList.add("hit"), 120 + i * 60);
+    setTimeout(() => el.classList.remove("hit"), 700 + i * 60);
+  });
+}
+
+$("c-plain").addEventListener("input", renderCaesar);
+$("c-shift").addEventListener("input", renderCaesar);
+$("c-dec").addEventListener("click", () => {
+  const s = $("c-shift"); s.value = (parseInt(s.value,10) + 25) % 26; renderCaesar();
+});
+$("c-inc").addEventListener("click", () => {
+  const s = $("c-shift"); s.value = (parseInt(s.value,10) + 1) % 26; renderCaesar();
+});
+$("c-enc").addEventListener("click", renderCaesar);
+
+/* 暴力破解 */
+$("c-crack").addEventListener("click", () => {
+  const plain = $("c-plain").value;
+  const cipher = caesar(plain, parseInt($("c-shift").value, 10));
+  const list = [];
+  for(let k = 0; k < 26; k++){
+    list.push({k, txt: caesar(cipher, 26 - k), score: englishScore(caesar(cipher, 26 - k))});
+  }
+  list.sort((a,b) => a.score - b.score);
+  const wrap = $("c-crack-list");
+  wrap.hidden = false;
+  wrap.innerHTML = list.map((item, idx) => {
+    const cls = idx < 3 ? "crack-row top" : "crack-row";
+    return `<div class="${cls}"><span class="off">${item.k}</span><span class="txt">${esc(item.txt)}</span></div>`;
+  }).join("");
+});
+
+/* ================= 04 频率分析 ================= */
+function buildFreqChart(text){
+  const letters = toArr(text);
+  const count = {}; A.split("").forEach(ch => count[ch] = 0);
+  letters.forEach(ch => count[ch]++);
+  const total = letters.length || 1;
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = $("f-chart");
+  svg.innerHTML = "";
+  const W = 760, H = 300, PL = 46, PR = 14, PT = 16, PB = 34;
+  const cw = (W - PL - PR) / 26;
+  const maxPct = 14;
+
+  const doc = svg.ownerDocument;
+  /* 网格线 */
+  for(let g = 0; g <= 3; g++){
+    const y = PT + (H - PT - PB) * g / 3;
+    const line = doc.createElementNS(NS,"line");
+    line.setAttribute("x1",PL); line.setAttribute("y1",y);
+    line.setAttribute("x2",W-PR); line.setAttribute("y2",y);
+    line.setAttribute("stroke","var(--bg-line)"); line.setAttribute("stroke-width","1");
+    svg.appendChild(line);
+    const t = doc.createElementNS(NS,"text");
+    t.setAttribute("x",PL-6); t.setAttribute("y",y+4);
+    t.setAttribute("text-anchor","end"); t.setAttribute("font-size","10");
+    t.setAttribute("fill","var(--ink-faint)");
+    t.textContent = (maxPct*(3-g)/3).toFixed(0) + "%";
+    svg.appendChild(t);
+  }
+  /* 英文标准频率虚线 */
+  const enLine = doc.createElementNS(NS,"polyline");
+  enLine.setAttribute("fill","none");
+  enLine.setAttribute("stroke","var(--teal-soft)");
+  enLine.setAttribute("stroke-width","1.6");
+  enLine.setAttribute("stroke-dasharray","5 4");
+  const pts = A.split("").map((ch,i) => {
+    const x = PL + cw * i + cw/2;
+    const y = PT + (H - PT - PB) * (1 - Math.min(EN_FREQ[ch], maxPct)/maxPct);
+    return x + "," + y;
+  });
+  enLine.setAttribute("points", pts.join(" "));
+  svg.appendChild(enLine);
+
+  /* 柱子 + 标签 */
+  A.split("").forEach((ch,i) => {
+    const pct = count[ch] / total * 100;
+    const x = PL + cw * i;
+    const y = PT + (H - PT - PB) * (1 - Math.min(pct, maxPct)/maxPct);
+    const bh = (H - PT - PB) * Math.min(pct, maxPct)/maxPct;
+    const rect = doc.createElementNS(NS,"rect");
+    rect.setAttribute("x", x + cw*0.18);
+    rect.setAttribute("y", y);
+    rect.setAttribute("width", cw*0.64);
+    rect.setAttribute("height", Math.max(bh, 1));
+    rect.setAttribute("rx","2");
+    rect.setAttribute("fill","var(--amber)");
+    rect.setAttribute("fill-opacity","0.9");
+    svg.appendChild(rect);
+    const t = doc.createElementNS(NS,"text");
+    t.setAttribute("x", x + cw/2);
+    t.setAttribute("y", H - PB + 14);
+    t.setAttribute("text-anchor","middle"); t.setAttribute("font-size","11");
+    t.setAttribute("font-family","var(--mono)");
+    t.setAttribute("fill","var(--ink-dim)");
+    t.textContent = ch;
+    svg.appendChild(t);
+  });
+}
+
+function analyzeFreq(){
+  const text = $("f-input").value;
+  buildFreqChart(text);
+  const letters = toArr(text);
+  if(letters.length === 0){
+    $("f-verdict").textContent = "没有可分析的字母，请输入至少一个字母。";
+    $("f-verdict").className = "note warn";
+    return;
+  }
+  const count = {}; letters.forEach(ch => count[ch] = (count[ch]||0)+1);
+  const sorted = A.split("").sort((a,b) => (count[b]||0) - (count[a]||0));
+  const top = sorted[0];
+  /* 假设最高频字母是 E，推测偏移 */
+  const shiftGuess = charDiff("E", top);
+  const decrypted = caesar(text, 26 - shiftGuess);
+  const candidates = [];
+  for(let k = 0; k < 26; k++){
+    const d = caesar(text, 26 - k);
+    candidates.push({k, score: englishScore(d)});
+  }
+  candidates.sort((a,b) => a.score - b.score);
+  const best = candidates[0];
+  const verdict = $("f-verdict");
+  verdict.className = "note";
+  verdict.innerHTML =
+    `最高频字母是 <b style="color:var(--amber-soft)">${top}</b>` +
+    `（出现 ${count[top]} 次）→ 假设它就是 E → 推测偏移 ${shiftGuess} → 解得：` +
+    `<span style="font-family:var(--mono);color:var(--ink)">${esc(decrypted)}</span><br>` +
+    `经频率评分校正，最可能的偏移是 <b style="color:var(--amber-soft)">${best.k}</b>：` +
+    `<span style="font-family:var(--mono);color:var(--ink)">${esc(caesar(text, 26 - best.k))}</span>`;
+}
+$("f-analyze").addEventListener("click", analyzeFreq);
+$("f-import").addEventListener("click", () => {
+  $("f-input").value = $("c-cipher").textContent;
+  analyzeFreq();
+});
+$("f-input").addEventListener("input", () => {
+  buildFreqChart($("f-input").value);
+});
+
+// ================= 02 维吉尼亚密码 =================
+function vigenereEncrypt(plain, key){
+  const keyLetters = toArr(key);
+  let ki = 0;
+  return plain.split("").map(ch => {
+    if(/[A-Za-z]/.test(ch)){
+      const pv = ch.toUpperCase().charCodeAt(0) - 65;
+      const k = keyLetters[ki % keyLetters.length];
+      ki++;
+      const kv = k.charCodeAt(0) - 65;
+      return {ch: A[(pv + kv) % 26], pv, kv, k};
+    }
+    return {ch, skip: true};
+  });
+}
+
+function renderVigenere(){
+  const plain = $("v-plain").value;
+  const key = $("v-key").value;
+  const res = vigenereEncrypt(plain, key);
+  const cipherText = res.map(r => r.skip ? r.ch : r.ch).join("");
+  $("v-cipher").textContent = cipherText;
+
+  const rows = $("v-proc-rows");
+  rows.innerHTML = "";
+  const mkRow = (label, cls) => {
+    const row = document.createElement("div");
+    row.className = "proc-row";
+    row.innerHTML = `<span class="proc-label">${label}</span><span class="proc-cells"></span>`;
+    return {row, cells: row.querySelector(".proc-cells")};
+  };
+  const rPlain = mkRow("明文 p", "head");
+  const rKey = mkRow("密钥 k", "key");
+  const rRes = mkRow("密文 c", "res");
+  rows.appendChild(rPlain.row);
+  rows.appendChild(rKey.row);
+  rows.appendChild(rRes.row);
+
+  res.forEach((item, i) => {
+    const cell = (container, text, cls, skip) => {
+      const d = document.createElement("span");
+      d.className = "proc-cell " + cls + (skip ? " skip" : "");
+      d.textContent = text;
+      container.appendChild(d);
+    };
+    if(item.skip){
+      cell(rPlain.cells, "·", "head", true);
+      cell(rKey.cells, "·", "key", true);
+      cell(rRes.cells, "·", "res", true);
+      return;
+    }
+    cell(rPlain.cells, item.ch === " " ? "·" : A[item.pv], "head");
+    cell(rKey.cells, item.k, "key");
+    cell(rRes.cells, item.ch, "res");
+  });
+  $("v-note").textContent =
+    `共加密 ${res.filter(r => !r.skip).length} 个字母；每个位置使用独立的偏移，密钥循环重复。`;
+}
+
+let vPlayTimer = null;
+function playVigenere(){
+  const plain = $("v-plain").value;
+  const key = $("v-key").value;
+  const res = vigenereEncrypt(plain, key);
+  const btn = $("v-play");
+  if(vPlayTimer){
+    clearInterval(vPlayTimer); vPlayTimer = null;
+    btn.textContent = "逐步演示";
+    document.querySelectorAll("#v-proc .proc-cell").forEach(el => el.classList.remove("cur"));
+    return;
+  }
+  renderVigenere();
+  const cells = Array.from(document.querySelectorAll("#v-proc .proc-cell"));
+  let idx = 0;
+  btn.textContent = "停止";
+  vPlayTimer = setInterval(() => {
+    cells.forEach(el => el.classList.remove("cur"));
+    if(idx >= cells.length){
+      clearInterval(vPlayTimer); vPlayTimer = null;
+      btn.textContent = "逐步演示";
+      return;
+    }
+    for(let k = 0; k < 3 && idx + k < cells.length; k++){
+      if(!cells[idx + k].classList.contains("skip")) cells[idx + k].classList.add("cur");
+    }
+    idx += 3;
+  }, 220);
+}
+
+$("v-enc").addEventListener("click", renderVigenere);
+$("v-play").addEventListener("click", playVigenere);
+$("v-plain").addEventListener("input", renderVigenere);
+$("v-key").addEventListener("input", renderVigenere);
+
+/* ================= 03 RSA ================= */
+function isPrime(x){
+  if(x < 2) return false;
+  if(x < 4) return true;
+  if(x % 2 === 0) return false;
+  for(let i = 3; i * i <= x; i += 2) if(x % i === 0) return false;
+  return true;
+}
+function gcd(a, b){ while(b){ [a, b] = [b, a % b]; } return a; }
+
+/* 扩展欧几里得：返回 gcd、逆元与迭代轨迹 */
+function egcdTrace(a, m){
+  let r0 = a, r1 = m, x0 = 1, y0 = 0, x1 = 0, y1 = 1;
+  const steps = [];
+  while(r1 !== 0){
+    const q = Math.floor(r0 / r1);
+    const r2 = r0 - q * r1, x2 = x0 - q * x1, y2 = y0 - q * y1;
+    steps.push({q, r0, r1, r2, x2, y2});
+    r0 = r1; r1 = r2; x0 = x1; x1 = x2; y0 = y1; y1 = y2;
+  }
+  return {g: r0, inv: ((x0 % m) + m) % m, steps};
+}
+
+function chooseE(phi){
+  for(const c of [17, 257, 65537, 65521, 13, 11, 7, 5, 3]){
+    if(c < phi && gcd(c, phi) === 1) return c;
+  }
+  for(let e = 2; e < phi; e++) if(gcd(e, phi) === 1) return e;
+  return null;
+}
+
+/* 快速幂（BigInt），并记录步骤 */
+function modPowTrace(base, exp, mod){
+  const steps = [];
+  let result = 1n, b = base % mod, e = exp;
+  steps.push({bit: "初值", b: b.toString(), result: "1", mul: "—"});
+  while(e > 0n){
+    const bit = e & 1n;
+    const prev = result;
+    if(bit) result = result * b % mod;
+    steps.push({
+      bit: bit.toString(),
+      b: b.toString(),
+      result: result.toString(),
+      mul: bit ? `${prev} × ${b} (mod ${mod}) = ${result}` : "跳过（指数位为 0）"
+    });
+    b = b * b % mod;
+    e >>= 1n;
+  }
+  return {steps, value: result};
+}
+
+let rsaState = {n: 0, phi: 0, e: 0, d: 0, pub: "", priv: ""};
+
+function renderRsaSteps(trace){
+  const wrap = $("r-steps");
+  wrap.innerHTML = "";
+  const add = (no, html) => {
+    const d = document.createElement("div");
+    d.className = "step";
+    d.innerHTML = `<span class="st-no">${no}</span><div class="st-body">${html}</div>`;
+    wrap.appendChild(d);
+  };
+  const s = rsaState;
+  add(1, `选择两个不同的素数：<span class="formula">p = ${s.p}</span>，<span class="formula">q = ${s.q}</span>`);
+  add(2, `计算模数：<span class="formula">n = p × q = ${s.p} × ${s.q} = ${s.n}</span>`);
+  add(3, `计算欧拉函数：<span class="formula">φ(n) = (p−1)(q−1) = ${s.p-1} × ${s.q-1} = ${s.phi}</span>`);
+  add(4, `选择公钥指数 e，要求 <span class="formula">1 &lt; e &lt; φ(n)</span> 且 <span class="formula">gcd(e, φ(n)) = 1</span>：<span class="formula">e = ${s.e}</span>`);
+  const valid = trace.steps.filter(st => st.q > 0 && st.r2 !== 0);
+  const last = valid[valid.length - 1];
+  const rowsHtml = valid.map((st, i) => {
+    return `<div class="plain">欧几里得第 ${i+1} 步：${st.r0} = ${st.q} × ${st.r1} + ${st.r2}</div>`;
+  }).join("");
+  const backtrace = last
+    ? `<div class="plain">回溯：1 = ${last.x2} × ${s.e} + (${last.y2}) × ${s.phi}，故 ${s.e} × ${last.x2} ≡ 1 (mod ${s.phi})</div>`
+    : "";
+  add(5, `用扩展欧几里得求私钥指数 d，即 <span class="formula">e·d ≡ 1 (mod φ(n))</span>：<br>${rowsHtml}${backtrace}<div class="plain" style="color:var(--amber-soft)">结果：d = ${last.x2 < 0 ? `${s.phi} + (${last.x2}) = ${s.d}` : s.d}（验证：${s.e} × ${s.d} ≡ 1 mod ${s.phi}）</div>`);
+}
+
+function generateRsa(){
+  const p = parseInt($("r-p").value, 10);
+  const q = parseInt($("r-q").value, 10);
+  const err = $("r-err");
+  if(!isPrime(p) || !isPrime(q)){
+    err.hidden = false;
+    err.textContent = `请输入两个素数。${isPrime(p) ? "" : p + " 不是素数。"}${isPrime(q) ? "" : q + " 不是素数。"}`;
+    return;
+  }
+  if(p === q){
+    err.hidden = false;
+    err.textContent = "p 和 q 必须不同（相同则 n 能被平方根直接分解）。";
+    return;
+  }
+  err.hidden = true;
+  const n = p * q, phi = (p - 1) * (q - 1);
+  const e = chooseE(phi);
+  const trace = egcdTrace(e, phi);
+  const d = trace.inv;
+  rsaState = {p, q, n, phi, e, d};
+  $("r-pub").textContent = `(e = ${e}, n = ${n})`;
+  $("r-priv").textContent = `(d = ${d}, n = ${n})`;
+  renderRsaSteps(trace);
+  $("r-out").textContent = "密钥已生成，输入消息 m 后加密。";
+  $("r-pow-steps").innerHTML = "";
+}
+
+$("r-gen").addEventListener("click", generateRsa);
+$("r-random").addEventListener("click", () => {
+  const primes = [3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97,101,103,107,109,113,127,131,137,139,149,151,157,163,167,173,179,181,191,193,197,199];
+  const pick = () => primes[Math.floor(Math.random() * primes.length)];
+  let p = pick(), q = pick();
+  while(q === p) q = pick();
+  $("r-p").value = p; $("r-q").value = q;
+});
+$("r-auto").addEventListener("click", () => {
+  $("r-p").value = 47; $("r-q").value = 59; $("r-msg").value = 42;
+  generateRsa();
+});
+
+function renderPowSteps(steps){
+  const wrap = $("r-pow-steps");
+  wrap.innerHTML = "";
+  const add = (no, html) => {
+    const d = document.createElement("div");
+    d.className = "step";
+    d.innerHTML = `<span class="st-no">${no}</span><div class="st-body">${html}</div>`;
+    wrap.appendChild(d);
+  };
+  add(1, `将指数按二进制从低位到高位展开，逐位平方、按需乘入：<span class="plain">${steps.map((s,i) => i === 0 ? "" : s.bit).join(" ")}</span>`);
+  steps.forEach((s, i) => {
+    if(i === 0) return;
+    add(i + 1, `指数位 = <span class="formula">${s.bit}</span>：当前底数 b = <span class="formula">${s.b}</span>，操作：${s.mul}`);
+  });
+}
+
+$("r-enc").addEventListener("click", () => {
+  const s = rsaState;
+  if(!s.n){ $("r-out").textContent = "请先生成密钥对。"; return; }
+  const m = parseInt($("r-msg").value, 10);
+  if(!(m > 0 && m < s.n)){
+    $("r-out").textContent = `消息 m 必须在 1 到 n−1（${s.n - 1}）之间。`;
+    return;
+  }
+  const tr = modPowTrace(BigInt(m), BigInt(s.e), BigInt(s.n));
+  $("r-out").textContent = `c = ${m}^${s.e} mod ${s.n} = ${tr.value}`;
+  renderPowSteps(tr.steps);
+});
+
+$("r-dec").addEventListener("click", () => {
+  const s = rsaState;
+  if(!s.n){ $("r-out").textContent = "请先生成密钥对。"; return; }
+  const m = parseInt($("r-msg").value, 10);
+  if(!(m > 0 && m < s.n)){
+    $("r-out").textContent = `消息 m 必须在 1 到 n−1（${s.n - 1}）之间。`;
+    return;
+  }
+  const c = modPowTrace(BigInt(m), BigInt(s.e), BigInt(s.n)).value;
+  const tr = modPowTrace(c, BigInt(s.d), BigInt(s.n));
+  $("r-out").textContent = `解密：m' = ${c}^${s.d} mod ${s.n} = ${tr.value}，${tr.value === BigInt(m) ? "✓ 与原文一致" : "✗ 不一致！"}`;
+  renderPowSteps(tr.steps);
+});
+
+/* ================= 初始化 ================= */
+buildRing();
+renderCaesar();
+renderVigenere();
+buildFreqChart($("f-input").value);
+generateRsa();
+</script>
+</body>
+</html>
